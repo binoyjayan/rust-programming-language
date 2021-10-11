@@ -1,0 +1,21 @@
+
+Cheat sheet
+------------------------------------------------------------
+rustc                           - Rust compiler
+rustup                          - Rust toolchain installer
+cargo new <project-name>        - Create a new project
+cargo new <project-name> --bin  - Create a new executable project
+cargo build                     - Build debug project
+cargo build --release           - Build release project
+cargo run                       - Build and run debug project
+cargo run --release             - Build and run release project
+cargo clippy                   - Check idiomatic rust
+
+
+Install nightly
+------------------------------------------------------------
+rustup toolchain install nightly
+
+IDEs
+------------------------------------------------------------
+https://www.jetbrains.com/idea/download/#section=linux
