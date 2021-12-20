@@ -20,4 +20,6 @@ Refer to the sections in the following order:
  - d2_iterators_combinator
  - d2_iterators_itertools
  - d2_iterators_intoiterator
+ - d2_iterators_loopable
+
 
