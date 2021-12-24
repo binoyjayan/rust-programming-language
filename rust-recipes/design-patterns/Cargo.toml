@@ -1,0 +1,13 @@
+[package]
+name = "design-patterns"
+version = "0.1.0"
+authors = ["Binoy Jayan <binoyjayan@gmail.com>"]
+edition = "2018"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[[bin]]
+name = "visitor"
+path = "src/visitor.rs"
+
+[dependencies]
