@@ -1,4 +1,3 @@
-pub use self::error::{Error, Result};
 use axum::{
     extract::{Path, Query},
     middleware,
@@ -8,8 +7,11 @@ use axum::{
 };
 pub use axum_macros::debug_handler;
 use serde::Deserialize;
+use tower_cookies::CookieManagerLayer;
 use tower_http::services::ServeDir;
 use web::routes_login::routes_login;
+
+pub use self::error::{Error, Result};
 
 mod error;
 mod web;
@@ -20,10 +22,12 @@ const LISTEN_ADDRESS: &str = "0.0.0.0:3000";
 async fn main() {
     tracing_subscriber::fmt::init();
 
+    // Layers are executed from bottom to top
     let routes_all = Router::new()
         .merge(routes_hello())
         .merge(routes_login())
         .layer(middleware::map_response(main_response_mapper))
+        .layer(CookieManagerLayer::new())
         .fallback_service(routes_static());
 
     println!("Listening on: {}", LISTEN_ADDRESS);
