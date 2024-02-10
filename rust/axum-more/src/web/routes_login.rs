@@ -11,7 +11,7 @@ struct LoginPayload {
     password: String,
 }
 
-pub fn routes_login() -> Router {
+pub fn routes() -> Router {
     Router::new().route("/api/login", post(api_login))
 }
 

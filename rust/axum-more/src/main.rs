@@ -6,26 +6,32 @@ use axum::{
     Router,
 };
 pub use axum_macros::debug_handler;
+use model::ModelController;
 use serde::Deserialize;
 use tower_cookies::CookieManagerLayer;
 use tower_http::services::ServeDir;
-use web::routes_login::routes_login;
+use web::routes_login;
+use web::routes_tickets;
 
 pub use self::error::{Error, Result};
 
 mod error;
+mod model;
 mod web;
 
 const LISTEN_ADDRESS: &str = "0.0.0.0:3000";
 
 #[tokio::main]
-async fn main() {
+async fn main() -> Result<()> {
     tracing_subscriber::fmt::init();
+
+    let mc = ModelController::new();
 
     // Layers are executed from bottom to top
     let routes_all = Router::new()
         .merge(routes_hello())
-        .merge(routes_login())
+        .merge(routes_login::routes())
+        .nest("/api", routes_tickets::routes(mc))
         .layer(middleware::map_response(main_response_mapper))
         .layer(CookieManagerLayer::new())
         .fallback_service(routes_static());
@@ -35,6 +41,7 @@ async fn main() {
     axum::serve(listener, routes_all.into_make_service())
         .await
         .unwrap();
+    Ok(())
 }
 
 async fn main_response_mapper(res: Response) -> Response {
