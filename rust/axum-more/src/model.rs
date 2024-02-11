@@ -73,6 +73,6 @@ impl MockStore {
     pub async fn delete_ticket(&self, id: u64) -> Result<Ticket> {
         let mut tickets = self.tickets.lock().unwrap();
         let ticket = tickets.get_mut(id as usize - 1).and_then(|t| t.take());
-        ticket.ok_or(Error::NotFound)
+        ticket.ok_or(Error::TicketIdNotFound { id })
     }
 }

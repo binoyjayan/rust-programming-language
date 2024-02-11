@@ -10,6 +10,7 @@ use model::ModelController;
 use serde::Deserialize;
 use tower_cookies::CookieManagerLayer;
 use tower_http::services::ServeDir;
+use web::mw_auth;
 use web::routes_login;
 use web::routes_tickets;
 
@@ -27,11 +28,15 @@ async fn main() -> Result<()> {
 
     let mc = ModelController::new();
 
+    // Middleware is only applicable to the routes below it i.e. routes_api
+    let routes_api =
+        routes_tickets::routes(mc).layer(middleware::from_fn(mw_auth::mw_require_auth));
+
     // Layers are executed from bottom to top
     let routes_all = Router::new()
         .merge(routes_hello())
         .merge(routes_login::routes())
-        .nest("/api", routes_tickets::routes(mc))
+        .nest("/api", routes_api)
         .layer(middleware::map_response(main_response_mapper))
         .layer(CookieManagerLayer::new())
         .fallback_service(routes_static());
