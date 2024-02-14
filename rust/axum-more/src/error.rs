@@ -15,6 +15,7 @@ pub enum Error {
 
 impl IntoResponse for Error {
     fn into_response(self) -> Response {
+        println!("-->> {:<12} - {self:?}", "INTO_RES");
         StatusCode::INTERNAL_SERVER_ERROR.into_response()
     }
 }
