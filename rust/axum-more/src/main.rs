@@ -31,7 +31,7 @@ async fn main() -> Result<()> {
 
     // Middleware is only applicable to the routes below it i.e. routes_api
     let routes_api =
-        routes_tickets::routes(mc).layer(middleware::from_fn(mw_auth::mw_require_auth));
+        routes_tickets::routes(mc.clone()).layer(middleware::from_fn(mw_auth::mw_require_auth));
 
     // Layers are executed from bottom to top
     let routes_all = Router::new()
@@ -39,6 +39,10 @@ async fn main() -> Result<()> {
         .merge(routes_login::routes())
         .nest("/api", routes_api)
         .layer(middleware::map_response(main_response_mapper))
+        .layer(middleware::from_fn_with_state(
+            mc.clone(),
+            mw_auth::mw_ctx_resolver,
+        ))
         .layer(CookieManagerLayer::new())
         .fallback_service(routes_static());
 

@@ -1,13 +1,12 @@
 use crate::{Error, Result};
 
+use axum::async_trait;
 use axum::body::Body;
 use axum::extract::FromRequestParts;
 use axum::http::request::Parts;
 use axum::middleware::Next;
-use axum::{async_trait, RequestPartsExt};
 use axum::{http::Request, response::Response};
-use tower_cookies::Cookies;
-// use async_trait::async_trait;
+use tower_cookies::{Cookie, Cookies};
 
 use crate::ctx::Ctx;
 use crate::web::AUTH_TOKEN;
@@ -17,6 +16,34 @@ pub async fn mw_require_auth(ctx: Result<Ctx>, req: Request<Body>, next: Next) -
     println!("-->> {:<12} - mw_require_auth - {:?}", "MIDDLEWARE", ctx);
     // Call the extractor to get the user_id
     ctx?;
+    Ok(next.run(req).await)
+}
+
+// Optimize heavy lifting of Ctx extractor to a separate middleware
+pub async fn mw_ctx_resolver(
+    cookies: Cookies,
+    mut req: Request<Body>,
+    next: Next,
+) -> Result<Response> {
+    println!("-->> {:<12} - mw_ctx_resolver", "MIDDLEWARE");
+    let token = cookies.get(AUTH_TOKEN).map(|c| c.value().to_string());
+    // Compute Result<Ctx>
+    let result_ctx = match token
+        .ok_or(Error::AuthFailNoAuthToken)
+        .and_then(parse_token)
+    {
+        Ok((uid, _exp, _sign)) => Ok(Ctx::new(uid)),
+        Err(e) => Err(e),
+    };
+
+    // Remove cookie if something went wrong other than 'AuthFailNoAuthToken'
+    if result_ctx.is_err() && !matches!(result_ctx, Err(Error::AuthFailNoAuthToken)) {
+        cookies.remove(Cookie::from(AUTH_TOKEN));
+    }
+
+    // Store the result in the request extensions
+    req.extensions_mut().insert(result_ctx);
+
     Ok(next.run(req).await)
 }
 
@@ -48,12 +75,10 @@ impl<S: Send + Sync> FromRequestParts<S> for Ctx {
     async fn from_request_parts(parts: &mut Parts, _state: &S) -> Result<Self> {
         println!("-->> {:<12} - Ctx", "EXTRACTOR");
         // Extract the cookies from the request
-        let cookies = parts.extract::<Cookies>().await.unwrap();
-        let token = cookies.get(AUTH_TOKEN).map(|c| c.value().to_string());
-        let (uid, _, _) = token
-            .ok_or(Error::AuthFailNoAuthToken)
-            .and_then(parse_token)?;
-
-        Ok(Ctx::new(uid))
+        parts
+            .extensions
+            .get::<Result<Ctx>>()
+            .ok_or(Error::AuthFailCtxNotFound)?
+            .clone()
     }
 }
