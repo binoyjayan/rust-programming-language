@@ -12,7 +12,11 @@ cargo run --release              - Build and run release project
 cargo clippy                     - Check idiomatic rust
 cargo test                       - Run tests
 cargo test -- --nocapture        - Run tests with output
-cargo watch -q -c -w src/ -x run - Auto build on changes to src
+
+Auto build
+------------------------------------------------------------
+cargo watch -q -c -w src/ -x run                     - Auto build on changes to src
+cargo watch -q -c -w tests/ -x 'test -- --nocapture' - Auto build on changes to tests
 
 Install nightly
 ------------------------------------------------------------

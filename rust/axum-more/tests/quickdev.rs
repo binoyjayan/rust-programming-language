@@ -2,6 +2,7 @@ use anyhow::Result;
 use serde_json::json;
 
 // cargo test -- --nocapture
+// cargo watch -q -c -w tests/ -x 'test -- --nocapture'
 
 #[tokio::test]
 async fn quick_dev() -> Result<()> {
