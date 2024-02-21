@@ -14,7 +14,7 @@ fn on_connect(socket: SocketRef, Data(data): Data<Value>) {
         "message",
         |socket: SocketRef, Data::<Value>(data), Bin(bin)| {
             info!("Received event: {:?} {:?}", data, bin);
-            socket.bin(bin).emit("message-back", data).ok();
+            socket.emit("response", "Hey").ok();
         },
     );
 
@@ -42,7 +42,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     info!("Starting server");
 
-    let listener = tokio::net::TcpListener::bind("0.0.0.0:3000").await.unwrap();
+    let listener = tokio::net::TcpListener::bind("0.0.0.0:8080").await.unwrap();
     axum::serve(listener, app).await.unwrap();
 
     Ok(())
