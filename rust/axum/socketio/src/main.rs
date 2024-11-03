@@ -1,7 +1,8 @@
 use axum::routing::get;
 use serde_json::Value;
 use socketioxide::{
-    extract::{AckSender, Bin, Data, SocketRef},
+    extract::{Bin, Data, SocketRef},
+    socket::DisconnectReason,
     SocketIo,
 };
 use tracing::info;
@@ -12,20 +13,17 @@ fn on_connect(socket: SocketRef, Data(data): Data<Value>) {
 
     socket.on(
         "message",
-        |socket: SocketRef, Data::<Value>(data), Bin(bin)| {
-            info!("Received event: {:?} {:?}", data, bin);
+        |socket: SocketRef, Data::<Value>(data), Bin(_bin)| {
+            info!("Received event: {:?}", data);
             socket.emit("response", "Hey").ok();
         },
     );
 
-    socket.on(
-        "message-with-ack",
-        |Data::<Value>(data), ack: AckSender, Bin(bin)| {
-            info!("Received event [with-ack]: {:?} {:?}", data, bin);
-            ack.bin(bin).send(data).ok();
-        },
-    );
+    socket.on_disconnect(|socket: SocketRef, reason: DisconnectReason | {
+        info!("Socket.IO disconnected: {:?} {:?} because {}", socket.ns(), socket.id, reason);
+    });
 }
+
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
