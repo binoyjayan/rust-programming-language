@@ -19,3 +19,7 @@
 15. [Tracing: logging](./tracing_log). Setup trace-based logging.
 16. [Tracing: structures](./tracing_json/). Log to JSON instead.
 17. [Adapting Streams](./stream_adapt/). Adapt a stream in-flight and learn about pinning.
+
+## Reference
+
+https://www.youtube.com/watch?v=0HwrZp9CBD4&t=2479s
