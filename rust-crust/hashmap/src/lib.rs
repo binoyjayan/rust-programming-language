@@ -121,11 +121,124 @@ where
         Some(val)
     }
 
+    /// return the number of elements in the map
     pub fn len(&self) -> usize {
         self.items
     }
+
+    /// return true if the map is empty
     pub fn is_empty(&self) -> bool {
         self.len() == 0
+    }
+}
+
+/// Entry API gives a mutable reference to where something that is
+/// inserted in the map. Entry is an enum with two variants:
+/// 1. Vacant - when the key is not present in the map
+/// 2. Occupied - when the key is present in the map
+pub enum Entry<'a, K, V> {
+    Occupied(OccupiedEntry<'a, K, V>),
+    Vacant(VacantEntry<'a, K, V>),
+}
+
+/// OccupiedEntry is returned when the key is present in the map
+/// It contains a mutable reference to the entry in the vector
+pub struct OccupiedEntry<'a, K, V> {
+    entry: &'a mut (K, V),
+}
+
+/// VacantEntry is returned when the key is not present in the map
+/// It contains a mutable reference to the map and the bucket where
+/// the element is inserted. It will also keep the key to be inserted
+/// because the key needed when the entry is inserted later.
+pub struct VacantEntry<'a, K: 'a, V: 'a> {
+    key: K,
+    map: &'a mut HashMap<K, V>,
+    bucket: usize,
+}
+
+impl<'a, K, V> VacantEntry<'a, K, V> {
+    /// Consumes self and inserts the key-value pair into the map
+    /// Returns a mutable reference to the value so that it can be
+    /// modified later as part of the entry API where this is used.
+    pub fn insert(self, value: V) -> &'a mut V
+    where
+        K: Hash + PartialEq,
+    {
+        self.map.buckets[self.bucket].push((self.key, value));
+        self.map.items += 1;
+        // unwrap is safe because we just inserted the value
+        &mut self.map.buckets[self.bucket].last_mut().unwrap().1
+    }
+}
+
+impl<'a, K, V> Entry<'a, K, V>
+where
+    K: Hash + PartialEq,
+{
+    /// Consumes self and returns a mutable reference to the value
+    /// so that it can be modified later. This helps in updating the
+    /// value in the map regardless of whether the key is present or not.
+    pub fn or_insert(self, value: V) -> &'a mut V {
+        match self {
+            Entry::Occupied(entry) => &mut entry.entry.1,
+            Entry::Vacant(entry) => entry.insert(value),
+        }
+    }
+
+    /// Similar to or_insert but takes a maker F where F is a closure
+    /// that returns a V. The function itself returns a reference to the
+    /// value being inserted. This is useful when the value is expensive
+    /// to create and should only be created if the key is not present
+    /// in the map. In this case, 'maker()' is only called if the key is
+    /// not present in the map.
+    pub fn or_insert_with<F>(self, maker: F) -> &'a mut V
+    where
+        F: FnOnce() -> V,
+    {
+        match self {
+            Entry::Occupied(entry) => &mut entry.entry.1,
+            Entry::Vacant(entry) => entry.insert(maker()),
+        }
+    }
+
+    /// Similar to or_insert_with but creates a default value using the
+    /// Default trait. In this case, the value type V must implement the
+    /// Default trait.
+    pub fn or_default(self) -> &'a mut V
+    where
+        V: Default,
+    {
+        self.or_insert_with(Default::default)
+    }
+}
+
+impl<K, V> HashMap<K, V>
+where
+    K: Hash + PartialEq,
+{
+    pub fn entry(&mut self, key: K) -> Entry<K, V> {
+        if self.buckets.is_empty() || self.items > self.buckets.len() * 3 / 4 {
+            self.resize();
+        }
+        let bucket = self.bucket(&key);
+        // Find an element in the bucket that matches the key and return
+        // mutable reference to it if found. If not found, return a Vacant
+        // entry with the key and mutable reference to the bucket.
+        match self.buckets[bucket]
+            .iter_mut()
+            .find(|(ref ekey, _)| ekey == &key)
+        {
+            Some(entry) => Entry::Occupied(OccupiedEntry {
+                // use unsafe to avoid borrowing issues
+                entry: unsafe { mem::transmute(entry) },
+            }),
+            None => Entry::Vacant(VacantEntry {
+                key,
+                map: self,
+                bucket,
+            }),
+        }
     }
 }
 
@@ -263,4 +376,25 @@ fn test_iterator() {
         }
     }
     assert_eq!(map.into_iter().count(), 4);
+}
+
+#[test]
+fn test_entry() {
+    let mut map = HashMap::new();
+    map.insert("foo", 42);
+    map.insert("bar", 23);
+    map.insert("baz", 142);
+    map.insert("quox", 7);
+    let entry = map.entry("foo");
+    assert_eq!(entry.or_insert(42), &42);
+    let entry = map.entry("baz");
+    assert_eq!(entry.or_insert(42), &142);
+    let entry = map.entry("quox");
+    assert_eq!(entry.or_insert(42), &7);
+    let entry = map.entry("foobar");
+    assert_eq!(entry.or_insert(42), &42);
+    let entry = map.entry("foobar");
+    assert_eq!(entry.or_insert_with(|| 42), &42);
+    let entry = map.entry("foobar");
+    assert_eq!(entry.or_default(), &42);
 }
