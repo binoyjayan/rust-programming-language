@@ -1,4 +1,5 @@
 use std::{
+    borrow,
     collections::hash_map::DefaultHasher,
     hash::{Hash, Hasher},
 };
@@ -32,7 +33,11 @@ impl<K, V> HashMap<K, V>
 where
     K: Hash + PartialEq,
 {
-    pub fn bucket(&self, key: &K) -> usize {
+    pub fn bucket<Q>(&self, key: &Q) -> usize
+    where
+        K: borrow::Borrow<Q>,
+        Q: Hash + PartialEq + ?Sized,
+    {
         let mut hasher = DefaultHasher::new();
         key.hash(&mut hasher);
         (hasher.finish() % self.buckets.len() as u64) as usize
@@ -74,22 +79,42 @@ where
         None
     }
 
-    pub fn get(&self, key: &K) -> Option<&V> {
+    /// Get ideally takes a reference to a key and returns a reference to the value
+    /// But in this case, it should take a 'Q' where 'K' can be borrowed as 'Q'
+    /// Q is Hash + PartialEq because K is Hash + PartialEq. Q is also ?Sized
+    /// so that the hashmap can support types such as &str as keys which is unsized
+    /// Now 'ekey' is of type 'K' and 'key' is of type 'Q'. So borrow 'ekey' as'Q'
+    /// in order to compare them.
+    pub fn get<Q>(&self, key: &Q) -> Option<&V>
+    where
+        K: borrow::Borrow<Q>,
+        Q: Hash + PartialEq + ?Sized,
+    {
         let bucket = self.bucket(key);
         self.buckets[bucket]
             .iter()
-            .find(|(ref ekey, _)| ekey == key)
+            .find(|(ref ekey, _)| ekey.borrow() == key)
             .map(|(_, ref v)| v)
     }
 
-    pub fn contains_key(&self, key: &K) -> bool {
+    pub fn contains_key<Q>(&self, key: &Q) -> bool
+    where
+        K: borrow::Borrow<Q>,
+        Q: Hash + PartialEq + ?Sized,
+    {
         self.get(key).is_some()
     }
 
-    pub fn remove(&mut self, key: &K) -> Option<V> {
+    pub fn remove<Q>(&mut self, key: &Q) -> Option<V>
+    where
+        K: borrow::Borrow<Q>,
+        Q: Hash + PartialEq + ?Sized,
+    {
         let bucket = self.bucket(key);
         let bucket = &mut self.buckets[bucket];
-        let i = bucket.iter().position(|(ref ekey, _)| ekey == key)?;
+        let i = bucket
+            .iter()
+            .position(|(ref ekey, _)| ekey.borrow() == key)?;
         // use swap_remove to avoid shifting elements
         let val = bucket.swap_remove(i).1;
         self.items -= 1;
@@ -104,14 +129,15 @@ where
     }
 }
 
-impl<K, V> ops::Index<&K> for HashMap<K, V>
+impl<K, Q: ?Sized, V> ops::Index<&Q> for HashMap<K, V>
 where
-    K: Eq + std::hash::Hash,
+    K: Eq + Hash + borrow::Borrow<Q>,
+    Q: Eq + Hash,
 {
     type Output = V;
 
-    fn index(&self, key: &K) -> &Self::Output {
-        self.get(key).expect("Key not found")
+    fn index(&self, key: &Q) -> &V {
+        self.get(key).expect("no entry found for key")
     }
 }
 
