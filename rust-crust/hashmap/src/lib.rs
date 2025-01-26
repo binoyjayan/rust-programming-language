@@ -2,6 +2,7 @@ use std::{
     borrow,
     collections::hash_map::DefaultHasher,
     hash::{Hash, Hasher},
+    iter::FromIterator,
 };
 use std::{mem, ops};
 
@@ -296,12 +297,33 @@ impl<'a, K, V> Iterator for HashMapIterator<'a, K, V> {
     }
 }
 
+/// Implement IntoIterator for HashMap to allow iterating over
+/// the map using a reference to the map.
 impl<'a, K, V> IntoIterator for &'a HashMap<K, V> {
     type Item = (&'a K, &'a V);
     type IntoIter = HashMapIterator<'a, K, V>;
 
     fn into_iter(self) -> Self::IntoIter {
         HashMapIterator::new(self)
+    }
+}
+
+/// Implement FromIterator for HashMap
+/// This allows us to collect an iterator of key-value pairs into a HashMap
+/// The from_iter takes a generic iterator that produces (K, V) pairs.
+impl<K, V> FromIterator<(K, V)> for HashMap<K, V>
+where
+    K: Hash + PartialEq,
+{
+    fn from_iter<T>(iter: T) -> Self
+    where
+        T: IntoIterator<Item = (K, V)>,
+    {
+        let mut map = HashMap::new();
+        for (k, v) in iter {
+            map.insert(k, v);
+        }
+        map
     }
 }
 
@@ -397,4 +419,17 @@ fn test_entry() {
     assert_eq!(entry.or_insert_with(|| 42), &42);
     let entry = map.entry("foobar");
     assert_eq!(entry.or_default(), &42);
+}
+
+#[test]
+fn test_from_iterator() {
+    let map: HashMap<_, _> = [("foo", 42), ("bar", 23), ("baz", 142), ("quox", 7)]
+        .iter()
+        .cloned()
+        .collect();
+    assert_eq!(map.len(), 4);
+    assert_eq!(map["foo"], 42);
+    assert_eq!(map["bar"], 23);
+    assert_eq!(map["baz"], 142);
+    assert_eq!(map["quox"], 7);
 }
