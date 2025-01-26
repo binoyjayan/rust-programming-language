@@ -255,13 +255,14 @@ where
     }
 }
 
-pub struct HashMapIterator<'a, K, V> {
+/// Iterator for HashMap
+pub struct HashMapIter<'a, K, V> {
     map: &'a HashMap<K, V>,
     bucket: usize,
     at: usize,
 }
 
-impl<'a, K, V> HashMapIterator<'a, K, V> {
+impl<'a, K, V> HashMapIter<'a, K, V> {
     fn new(map: &'a HashMap<K, V>) -> Self {
         Self {
             map,
@@ -271,7 +272,7 @@ impl<'a, K, V> HashMapIterator<'a, K, V> {
     }
 }
 
-impl<'a, K, V> Iterator for HashMapIterator<'a, K, V> {
+impl<'a, K, V> Iterator for HashMapIter<'a, K, V> {
     type Item = (&'a K, &'a V);
 
     fn next(&mut self) -> Option<Self::Item> {
@@ -301,10 +302,43 @@ impl<'a, K, V> Iterator for HashMapIterator<'a, K, V> {
 /// the map using a reference to the map.
 impl<'a, K, V> IntoIterator for &'a HashMap<K, V> {
     type Item = (&'a K, &'a V);
-    type IntoIter = HashMapIterator<'a, K, V>;
+    type IntoIter = HashMapIter<'a, K, V>;
 
     fn into_iter(self) -> Self::IntoIter {
-        HashMapIterator::new(self)
+        HashMapIter::new(self)
+    }
+}
+
+/// Owned iterator for HashMap
+pub struct HashMapIntoIter<K, V> {
+    map: HashMap<K, V>,
+    bucket: usize,
+}
+
+impl<K, V> Iterator for HashMapIntoIter<K, V> {
+    type Item = (K, V);
+
+    fn next(&mut self) -> Option<Self::Item> {
+        while let Some(bucket) = self.map.buckets.get_mut(self.bucket) {
+            if !bucket.is_empty() {
+                return Some(bucket.swap_remove(0));
+            }
+            // Move to the next bucket if the current one is empty.
+            self.bucket += 1;
+        }
+        None
+    }
+}
+
+impl<K, V> IntoIterator for HashMap<K, V> {
+    type Item = (K, V);
+    type IntoIter = HashMapIntoIter<K, V>;
+
+    fn into_iter(self) -> Self::IntoIter {
+        HashMapIntoIter {
+            map: self,
+            bucket: 0,
+        }
     }
 }
 
@@ -398,6 +432,27 @@ fn test_iterator() {
         }
     }
     assert_eq!(map.into_iter().count(), 4);
+}
+
+#[test]
+fn test_into_iterator() {
+    let mut map = HashMap::new();
+    map.insert("foo", 42);
+    map.insert("bar", 23);
+    map.insert("baz", 142);
+    map.insert("quox", 7);
+    let mut items = 0;
+    for (k, v) in map {
+        match k {
+            "foo" => assert_eq!(v, 42),
+            "bar" => assert_eq!(v, 23),
+            "baz" => assert_eq!(v, 142),
+            "quox" => assert_eq!(v, 7),
+            _ => unreachable!(),
+        }
+        items += 1;
+    }
+    assert_eq!(items, 4);
 }
 
 #[test]
