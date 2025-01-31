@@ -3,24 +3,7 @@ use clap::Parser;
 use std::path::PathBuf;
 use std::{fs, io};
 
-#[derive(Debug, Parser)]
-#[clap(disable_help_flag = true)]
-struct Opts {
-    /// Directory to start from (default is current directory)
-    pub dir: PathBuf,
-    /// Short size in human readable format
-    #[clap(short, long, default_value = "false")]
-    pub human_readable: bool,
-    /// Summarize disk usages
-    #[clap(short, long, default_value = "false")]
-    pub summarize: bool,
-    /// Count links
-    #[clap(short = 'l', long, default_value = "false")]
-    pub count_links: bool,
-    /// Show help information
-    #[clap(long, short = None, action = clap::ArgAction::Help)]
-    pub help: Option<bool>,
-}
+use rdu::Opts;
 
 fn calc_disk_usage(path: PathBuf) -> io::Result<u64> {
     let mut paths = vec![path.clone()];
@@ -38,18 +21,14 @@ fn calc_disk_usage(path: PathBuf) -> io::Result<u64> {
             // println!("{}: {}", path.display(), meta.len());
             total += meta.len();
         } else if file_type.is_dir() {
-            for entry in fs::read_dir(path)? {
-                if let Ok(entry) = entry {
-                    paths.push(entry.path());
-                }
+            for entry in fs::read_dir(path)?.flatten() {
+                paths.push(entry.path());
             }
         }
     }
     Ok(total)
 }
 
-// Benchmark with hyperfine (cargo install hyperfine)
-// hyperfine -L exe target/release/rdu,du '{exe} -hsl ~/SRC/linux'
 fn main() -> anyhow::Result<()> {
     let opts = Opts::parse();
     let start_dir = opts.dir;
