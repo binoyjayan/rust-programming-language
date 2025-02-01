@@ -24,6 +24,6 @@ Benchmark with linux kernel source code directory.
 
 ```
 export MAX_OPEN_FILES=409600
-
-hyperfine --warmup  2 -L exe du,target/release/rdu-sync,target/release/rdu-async,target/release/rdu-async-conc '{exe} -hsl ~/SRC/linux'
+cd target/release
+hyperfine --warmup 10 -L exe du,./rdu-sync,./rdu-async,./rdu-async-conc '{exe} -hsl ~/SRC/linux'
 ```
