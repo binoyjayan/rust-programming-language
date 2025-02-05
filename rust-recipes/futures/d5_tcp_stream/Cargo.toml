@@ -1,0 +1,18 @@
+[package]
+name = "tcpstream"
+version = "0.1.0"
+edition = "2021"
+
+[lib]
+name = "tcpstream"
+path = "src/lib.rs"
+
+[[bin]]
+name = "tcp_server"
+path = "src/main.rs"
+
+[dependencies]
+anyhow = "1.0.95"
+failure = "0.1.8"
+futures = "0.3.31"
+tokio = { version = "1.43.0", features = ["full"] }
