@@ -1,0 +1,10 @@
+[workspace]
+resolver = "2"
+
+members = [
+    "methodical",
+    "practical",
+    "rust_book",
+    "rust_book/hello_macro",
+    "rust_book/hello_macro/hello_macro_derive",
+]
