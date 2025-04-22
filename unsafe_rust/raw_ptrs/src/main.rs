@@ -1,3 +1,7 @@
+
+//  Run with miri
+//  cargo +nightly miri r
+
 fn main() {
     println!("Unsafe Rust");
 
@@ -11,8 +15,8 @@ fn main() {
     println!("r2: {:?}", r2);
     //print the values in unsafe blocks
     unsafe {
-        *r2 = 10;
         println!("*r1: {:?}", *r1);
+        *r2 = 10;
         println!("*r2: {:?}", *r2);
     }
 
