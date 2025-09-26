@@ -1,7 +1,7 @@
 //! Module that deals with syscalls that are required to
 //! communicate with the host operating system.
 
-/// Flag to add interest
+/// Operation value to add interest
 pub const EPOLL_CTL_ADD: i32 = 1;
 /// bitflag to indicate interest in read operations
 pub const EPOLLIN: i32 = 0x1;
