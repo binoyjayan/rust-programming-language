@@ -14,6 +14,7 @@ pub struct Poll {
 impl Poll {
     /// Create a new event queue
     pub fn new() -> io::Result<Self> {
+        // Argument to epoll_create is ignored but must be > 0
         let raw_fd = unsafe { ffi::epoll_create(1) };
         if raw_fd < 0 {
             return Err(io::Error::last_os_error());

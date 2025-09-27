@@ -14,7 +14,7 @@ unsafe extern "C" {
     pub fn epoll_create(size: i32) -> i32;
     // syscall to close a file descriptor
     pub fn close(fd: i32) -> i32;
-    // syscall to perform control operations on the epoll queue
+    // syscall to perform control operations (add, modify, delete) on the epoll queue
     pub fn epoll_ctl(epfd: i32, op: i32, fd: i32, event: *mut Event) -> i32;
     // Blocks until an event is available or the timeout is reached
     pub fn epoll_wait(epfd: i32, events: *mut Event, maxevents: i32, timeout: i32) -> i32;
@@ -25,7 +25,9 @@ unsafe extern "C" {
 #[derive(Debug)]
 #[repr(C, packed)]
 pub struct Event {
+    /// What kind of event to be notified about
     pub(crate) events: u32,
+    /// User data that is associated with the event
     pub(crate) epoll_data: usize,
 }
 
