@@ -1,6 +1,7 @@
 //! Main program
 use std::io;
-use std::{io::Write, net::TcpStream};
+use std::io::{Read, Write};
+use std::net::TcpStream;
 
 mod ffi;
 mod poll;
@@ -16,7 +17,7 @@ fn get_req(path: &str) -> Vec<u8> {
 }
 
 fn main() -> io::Result<()> {
-    let poll = Poll::new()?;
+    let mut poll = Poll::new()?; // needs to be mutable for poll(&mut self,...)
     let n_events = 5;
     let mut streams = Vec::new();
     let addr = "localhost:8080";
@@ -28,8 +29,50 @@ fn main() -> io::Result<()> {
         stream.set_nonblocking(true)?;
         stream.write_all(&request)?;
         poll.registry()
-            .register(&stream, i as usize, ffi::EPOLLIN | ffi::EPOLLET)?;
+            .register(&stream, i, ffi::EPOLLIN | ffi::EPOLLET)?;
         streams.push(stream);
     }
+
+    let mut completed = 0;
+    // Reuse events buffer instead of reallocating every loop.
+    let mut events: Vec<ffi::Event> = Vec::with_capacity(10);
+    while completed < n_events {
+        // safe before poll repopulates
+        events.clear();
+        poll.poll(&mut events, None)?;
+        if events.is_empty() {
+            println!("SPURIOUS WAKEUP");
+            continue;
+        }
+        completed += handle_events(&events, &mut streams)?;
+    }
+    println!("FINISHED");
     Ok(())
+}
+
+fn handle_events(events: &[ffi::Event], streams: &mut [TcpStream]) -> io::Result<usize> {
+    let mut finished = 0;
+    for event in events {
+        let idx = event.token();
+        let mut buf = vec![0u8; 4096];
+        loop {
+            match streams[idx].read(&mut buf) {
+                Ok(0) => {
+                    // EOF
+                    finished += 1;
+                    break;
+                }
+                Ok(n) => {
+                    let txt = String::from_utf8_lossy(&buf[..n]);
+                    println!("RECEIVED[{}]:\n{}\n----------\n", idx, txt);
+                    continue;
+                }
+                Err(ref e) if e.kind() == io::ErrorKind::WouldBlock => {
+                    break;
+                }
+                Err(e) => return Err(e),
+            }
+        }
+    }
+    Ok(finished)
 }
