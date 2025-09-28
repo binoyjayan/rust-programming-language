@@ -1,0 +1,4 @@
+# ---- Rust / Cargo ----
+# Workspace-wide target directory
+/target/
+**/target/

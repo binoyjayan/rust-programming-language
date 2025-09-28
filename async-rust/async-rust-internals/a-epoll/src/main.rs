@@ -56,6 +56,8 @@ fn handle_events(events: &[ffi::Event], streams: &mut [TcpStream]) -> io::Result
         let idx = event.token();
         let mut buf = vec![0u8; 4096];
         loop {
+            // Cannot use read_to_end because it will not allow
+            // us a chance to handle 'WouldBlock' error.
             match streams[idx].read(&mut buf) {
                 Ok(0) => {
                     // EOF
@@ -68,6 +70,8 @@ fn handle_events(events: &[ffi::Event], streams: &mut [TcpStream]) -> io::Result
                     continue;
                 }
                 Err(ref e) if e.kind() == io::ErrorKind::WouldBlock => {
+                    // Data transfer is not complete but the data is not ready now
+                    // so break and wait for the next event.
                     break;
                 }
                 Err(e) => return Err(e),
