@@ -1,5 +1,7 @@
 [workspace]
 members = [
-    "a-epoll"
+    "a-epoll",
+    "a-stack-swap",
 ]
 resolver = "2"
+
