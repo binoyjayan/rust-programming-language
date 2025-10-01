@@ -9,3 +9,7 @@ version = "0.1.0"
 [[package]]
 name = "a-stack-swap"
 version = "0.1.0"
+
+[[package]]
+name = "b-stack-show"
+version = "0.1.0"
