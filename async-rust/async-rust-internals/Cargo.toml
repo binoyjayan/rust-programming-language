@@ -3,6 +3,7 @@ members = [
     "a-epoll",
     "a-stack-swap",
     "b-stack-show",
+    "c-fibers",
 ]
 resolver = "2"
 
